@@ -1,0 +1,52 @@
+service: serverless-flask-sample
+configValidationMode: error
+plugins:
+  - serverless-python-requirements
+  - serverless-wsgi
+
+
+
+
+provider:
+  name: aws
+  runtime: python3.10
+  stage: dev
+  region: us-east-1
+  memorySize: 128 #mb
+  timeout: 10 #seconds
+  iam:
+    role:
+      statements:
+        # Allow functions to list all buckets
+        - Effect: Allow
+          Action: 
+            - 's3:ListBucket*'
+            - 's3:Delete*'
+            - 's3:Put*'
+            - 's3:Get*'
+          Resource: '*'
+
+custom:
+  wsgi:
+    app: src/app.app
+    packRequirements: false
+  fileBucketName: s3-crud-flask-api-${self:provider.stage}
+
+resources:
+  Resources:
+    FileBucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: ${self:custom.fileBucketName}
+        AccessControl: Private
+
+
+functions:
+  app:
+    handler: wsgi_handler.handler
+    events:
+      - http: 'GET /products'
+      - http: 'ANY /product'
+      - http: 'ANY /{proxy+}'
+
+
